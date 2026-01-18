@@ -2,19 +2,113 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>CSV Account Filter - Differences Table with Staff</title>
+<title>Shift Report Breakdown (Payments)</title>
 <style>
-body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; }
-input, select, button { margin: 10px 0; padding: 5px; width: 100%; }
-.table-container { max-height: 300px; overflow-y: auto; margin-top: 20px; border: 1px solid #ccc; }
-table { width: 100%; border-collapse: collapse; }
-th, td { border: 1px solid #ccc; padding: 8px; text-align: left; white-space: nowrap; }
-th { background: #eee; position: sticky; top: 0; z-index: 2; }
-tr.totals { font-weight: bold; background: #ffd; position: sticky; top: 30px; z-index: 1; }
-h2 { margin-top: 40px; }
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #1e1e1e;
+  color: #ecf0f1;
+  padding: 40px;
+  transition: all 0.3s ease;
+}
+
+h1 { margin-bottom: 30px; font-size: 28px; }
+h2 { margin-top: 40px; font-size: 20px; }
+
+input, select, button {
+  margin: 10px 0;
+  padding: 8px 12px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: 1px solid #555;
+  background-color: #2c3e50;
+  color: #ecf0f1;
+}
+
+button.export-btn {
+  background-color: #2980b9;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 10px;
+  padding: 6px 12px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+button.export-btn:hover { background-color: #1c5980; }
+
+button#toggleTheme {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #16a085;
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.3s ease;
+}
+button#toggleTheme:hover { background-color: #13876a; }
+
+.table-container {
+  max-height: 350px;
+  overflow-y: auto;
+  overflow-x: auto;
+  margin-top: 15px;
+  border: 1px solid #555;
+  border-radius: 10px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+th, td {
+  border: 1px solid #555;
+  padding: 8px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+th {
+  background: #34495e;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+tr:nth-child(even) { background-color: #3c4a5a; }
+
+tr.totals {
+  font-weight: bold;
+  background-color: #1f2a36;
+  position: sticky;
+  top: 35px;
+  z-index: 1;
+}
+
+body.light-mode {
+  background: #f9f9f9;
+  color: #2c3e50;
+}
+body.light-mode input, body.light-mode select, body.light-mode button {
+  background-color: #fff;
+  color: #2c3e50;
+  border: 1px solid #ccc;
+}
+body.light-mode th { background-color: #eee; color: #2c3e50; }
+body.light-mode tr:nth-child(even) { background-color: #f2f2f2; }
+body.light-mode tr.totals { background-color: #ffd; }
+body.light-mode button#toggleTheme { background-color: #16a085; color: #fff; }
+body.light-mode button#toggleTheme:hover { background-color: #13876a; }
 </style>
 </head>
-<body>
+<body class="dark-mode">
 
 <h1>CSV Account Filter - Differences Table with Staff</h1>
 
@@ -29,7 +123,7 @@ h2 { margin-top: 40px; }
   <option value="">--All Staff--</option>
 </select><br>
 
-<h2>Combined Account IDs with Amounts (Amounts ignore staff filter)</h2>
+<h2>Payments of the day </h2>
 <div class="table-container">
   <table id="combinedTable">
     <thead>
@@ -43,9 +137,9 @@ h2 { margin-top: 40px; }
     <tbody></tbody>
   </table>
 </div>
-<button id="exportCombinedCSV">Export Combined Table as CSV</button>
+<button class="export-btn" onclick="exportTableToCSV('combinedTable','combined_accounts.csv')">Export Combined Table</button>
 
-<h2>Filtered Account IDs with Amounts (Respects staff filter)</h2>
+<h2>Payments received</h2>
 <div class="table-container">
   <table id="filteredTable">
     <thead>
@@ -59,9 +153,9 @@ h2 { margin-top: 40px; }
     <tbody></tbody>
   </table>
 </div>
-<button id="exportFilteredCSV">Export Filtered Table as CSV</button>
+<button class="export-btn" onclick="exportTableToCSV('filteredTable','filtered_accounts.csv')">Export Filtered Table</button>
 
-<h2>Difference Table (Hide rows if Staff matches selected staff)</h2>
+<h2>Received by others</h2>
 <div class="table-container">
   <table id="differenceTable">
     <thead>
@@ -76,7 +170,9 @@ h2 { margin-top: 40px; }
     <tbody></tbody>
   </table>
 </div>
-<button id="exportDifferenceCSV">Export Difference Table as CSV</button>
+<button class="export-btn" onclick="exportTableToCSV('differenceTable','difference_accounts.csv')">Export Difference Table</button>
+
+<button id="toggleTheme">Toggle Dark/Light Mode</button>
 
 <script>
 let dataCSV1 = [];
@@ -85,18 +181,17 @@ let dataCSV2 = [];
 document.getElementById('csvFile1').addEventListener('change', updateData);
 document.getElementById('csvFile2').addEventListener('change', updateData);
 document.getElementById('staffSelect').addEventListener('change', showTables);
+document.getElementById('toggleTheme').addEventListener('click', ()=>document.body.classList.toggle('light-mode'));
 
-function parseCSV(text) {
-    const rows = [];
-    let row = [], field = '', insideQuotes = false;
-    for (let i=0;i<text.length;i++){
-        const char = text[i], nextChar = text[i+1];
-        if(char === '"'){
-            if(insideQuotes && nextChar === '"'){ field += '"'; i++; }
-            else insideQuotes = !insideQuotes;
-        } else if(char === ',' && !insideQuotes){ row.push(field); field=''; }
-        else if((char === '\n'||char==='\r') && !insideQuotes){
-            if(char==='\r' && nextChar==='\n') i++;
+function parseCSV(text){
+    const rows=[];
+    let row=[], field='', insideQuotes=false;
+    for(let i=0;i<text.length;i++){
+        const char=text[i], next=text[i+1];
+        if(char=='"'){ if(insideQuotes && next=='"'){ field+='"'; i++; } else insideQuotes=!insideQuotes; }
+        else if(char==',' && !insideQuotes){ row.push(field); field=''; }
+        else if((char=='\n'||char=='\r') && !insideQuotes){
+            if(char=='\r' && next=='\n') i++;
             row.push(field); field=''; if(row.some(f=>f!==undefined)) rows.push(row); row=[];
         } else field+=char;
     }
@@ -105,18 +200,17 @@ function parseCSV(text) {
 }
 
 function updateData(){
-    const file1 = document.getElementById('csvFile1').files[0];
-    const file2 = document.getElementById('csvFile2').files[0];
+    const file1=document.getElementById('csvFile1').files[0];
+    const file2=document.getElementById('csvFile2').files[0];
     if(file1) readCSV(file1,1);
     if(file2) readCSV(file2,2);
 }
 
-function readCSV(file,fileNumber){
-    const reader = new FileReader();
-    reader.onload = e=>{
-        const rows = parseCSV(e.target.result)
-            .filter(r => r[7] !== undefined && r[9] !== undefined);
-        if(fileNumber===1) dataCSV1=rows;
+function readCSV(file,num){
+    const reader=new FileReader();
+    reader.onload=e=>{
+        const rows=parseCSV(e.target.result).filter(r=>r[7]!==undefined && r[9]!==undefined);
+        if(num===1) dataCSV1=rows;
         else dataCSV2=rows;
         populateStaffFilter();
         showTables();
@@ -125,158 +219,132 @@ function readCSV(file,fileNumber){
 }
 
 function populateStaffFilter(){
-    const staffSet = new Set([...dataCSV1,...dataCSV2]
-        .map(r=>r[9]?.trim().replace(/"/g,'').replace(/\s*\(\d+\)$/,''))
-        .filter(Boolean));
-    const select = document.getElementById('staffSelect');
-    const current = select.value;
-    select.innerHTML = '<option value="">--All Staff--</option>';
+    const staffSet = new Set([...dataCSV1,...dataCSV2].map(r=>r[9]?.trim().replace(/"/g,'').replace(/\s*\(\d+\)$/,'')).filter(Boolean));
+    const select=document.getElementById('staffSelect');
+    const current=select.value;
+    select.innerHTML='<option value="">--All Staff--</option>';
     Array.from(staffSet).sort().forEach(s=>{
-        const opt = document.createElement('option'); opt.value=s; opt.textContent=s; select.appendChild(opt);
+        const opt=document.createElement('option'); opt.value=s; opt.textContent=s; select.appendChild(opt);
     });
     if(current) select.value=current;
 }
 
 function showTables(){
-    const staff = document.getElementById('staffSelect').value;
-    const cleanStaff = str=>str?.trim().replace(/"/g,'').replace(/\s*\(\d+\)$/,'');
-    const cleanAccount = str=>str?.trim().replace(/"/g,'');
-    const cleanAmount = str=>parseFloat(str?.trim().replace(/"/g,'').replace(/,/g,''))||0;
-    const cleanStaffName = str=>str?.trim().replace(/"/g,'').replace(/\s*\(\d+\)$/,'');
+    const staff=document.getElementById('staffSelect').value;
+    const cleanStaff = s=>s?.trim().replace(/"/g,'').replace(/\s*\(\d+\)$/,'');
+    const cleanAccount = s=>s?.trim().replace(/"/g,'');
+    const cleanAmount = s=>parseFloat(s?.trim().replace(/"/g,'').replace(/,/g,''))||0;
+    const cleanStaffName = s=>s?.trim().replace(/"/g,'').replace(/\s*\(\d+\)$/,'');
 
     function insertTotalsRow(tbody, values, includeStaff=false){
-        const tr = document.createElement('tr');
-        tr.classList.add('totals');
-        let cells = `<td>Totals</td>`;
-        if(includeStaff) cells += `<td></td>`;
-        cells += values.map(v=>`<td>${v.toFixed(2)}</td>`).join('');
-        tr.innerHTML = cells;
-        tbody.appendChild(tr);
+        const tr=document.createElement('tr'); tr.classList.add('totals');
+        let cells=`<td>Totals</td>`;
+        if(includeStaff) cells+=`<td></td>`;
+        cells+=values.map(v=>`<td>${v.toFixed(2)}</td>`).join('');
+        tr.innerHTML=cells; tbody.appendChild(tr);
     }
 
-    // Combined Table
-    const accountPaidMap = {}, accountTipsMap = {}, accountTotalMap = {};
+    const accountPaidMap={}, accountTipsMap={}, accountTotalMap={};
     dataCSV2.forEach(r=>{
-        const id = cleanAccount(r[7]); if(!id) return;
-        accountPaidMap[id] = (accountPaidMap[id] || 0) + cleanAmount(r[12]);
-        accountTipsMap[id] = (accountTipsMap[id] || 0) + cleanAmount(r[13]);
-        accountTotalMap[id] = (accountTotalMap[id] || 0) + cleanAmount(r[14]);
+        const id=cleanAccount(r[7]); if(!id) return;
+        accountPaidMap[id]=(accountPaidMap[id]||0)+cleanAmount(r[12]);
+        accountTipsMap[id]=(accountTipsMap[id]||0)+cleanAmount(r[13]);
+        accountTotalMap[id]=(accountTotalMap[id]||0)+cleanAmount(r[14]);
     });
-    const allAccounts1 = [...dataCSV1,...dataCSV2]
-        .filter(r=>!staff || cleanStaff(r[9])===staff)
-        .map(r=>({id: cleanAccount(r[7])}))
-        .filter(a=>a.id);
-    const seen1 = new Set();
-    const uniqueAccounts1 = allAccounts1.filter(a=>{ if(seen1.has(a.id)) return false; seen1.add(a.id); return true; });
-    const tbody1 = document.getElementById('combinedTable').querySelector('tbody');
-    tbody1.innerHTML = '';
-    let totalPaid=0, totalTips=0, totalTotal=0;
+
+    const allAccounts1=[...dataCSV1,...dataCSV2].filter(r=>!staff || cleanStaff(r[9])===staff).map(r=>({id:cleanAccount(r[7])})).filter(a=>a.id);
+    const seen1=new Set(); const uniqueAccounts1=allAccounts1.filter(a=>{ if(seen1.has(a.id)) return false; seen1.add(a.id); return true; });
+
+    const tbody1=document.getElementById('combinedTable').querySelector('tbody');
+    tbody1.innerHTML='';
+    let totalPaid=0,totalTips=0,totalTotal=0;
     uniqueAccounts1.sort((a,b)=>a.id.localeCompare(b.id)).forEach(a=>{
-        totalPaid += accountPaidMap[a.id]||0;
-        totalTips += accountTipsMap[a.id]||0;
-        totalTotal += accountTotalMap[a.id]||0;
+        totalPaid+=accountPaidMap[a.id]||0;
+        totalTips+=accountTipsMap[a.id]||0;
+        totalTotal+=accountTotalMap[a.id]||0;
     });
     insertTotalsRow(tbody1,[totalPaid,totalTips,totalTotal]);
     uniqueAccounts1.sort((a,b)=>a.id.localeCompare(b.id)).forEach(a=>{
         const tr=document.createElement('tr');
-        tr.innerHTML = `<td>${a.id}</td>
-                        <td>${(accountPaidMap[a.id]||0).toFixed(2)}</td>
-                        <td>${(accountTipsMap[a.id]||0).toFixed(2)}</td>
-                        <td>${(accountTotalMap[a.id]||0).toFixed(2)}</td>`;
+        tr.innerHTML=`<td>${a.id}</td><td>${(accountPaidMap[a.id]||0).toFixed(2)}</td><td>${(accountTipsMap[a.id]||0).toFixed(2)}</td><td>${(accountTotalMap[a.id]||0).toFixed(2)}</td>`;
         tbody1.appendChild(tr);
     });
 
-    // Filtered Table
-    const accountPaidMapF = {}, accountTipsMapF = {}, accountTotalMapF = {};
+    // Table 2 - filtered
+    const accountPaidMapF={}, accountTipsMapF={}, accountTotalMapF={};
     dataCSV2.forEach(r=>{
         if(staff && cleanStaff(r[9])!==staff) return;
-        const id = cleanAccount(r[7]); if(!id) return;
-        accountPaidMapF[id] = (accountPaidMapF[id] || 0) + cleanAmount(r[12]);
-        accountTipsMapF[id] = (accountTipsMapF[id] || 0) + cleanAmount(r[13]);
-        accountTotalMapF[id] = (accountTotalMapF[id] || 0) + cleanAmount(r[14]);
+        const id=cleanAccount(r[7]); if(!id) return;
+        accountPaidMapF[id]=(accountPaidMapF[id]||0)+cleanAmount(r[12]);
+        accountTipsMapF[id]=(accountTipsMapF[id]||0)+cleanAmount(r[13]);
+        accountTotalMapF[id]=(accountTotalMapF[id]||0)+cleanAmount(r[14]);
     });
-    const allAccounts2 = [...dataCSV1,...dataCSV2]
-        .filter(r=>!staff || cleanStaff(r[9])===staff)
-        .map(r=>({id: cleanAccount(r[7])}))
-        .filter(a=>a.id);
-    const seen2 = new Set();
-    const uniqueAccounts2 = allAccounts2.filter(a=>{ if(seen2.has(a.id)) return false; seen2.add(a.id); return true; });
-    const tbody2 = document.getElementById('filteredTable').querySelector('tbody');
-    tbody2.innerHTML = '';
-    let totalPaidF=0, totalTipsF=0, totalTotalF=0;
+
+    const allAccounts2=[...dataCSV1,...dataCSV2].filter(r=>!staff || cleanStaff(r[9])===staff).map(r=>({id:cleanAccount(r[7])})).filter(a=>a.id);
+    const seen2=new Set(); const uniqueAccounts2=allAccounts2.filter(a=>{ if(seen2.has(a.id)) return false; seen2.add(a.id); return true; });
+
+    const tbody2=document.getElementById('filteredTable').querySelector('tbody');
+    tbody2.innerHTML='';
+    let totalPaidF=0,totalTipsF=0,totalTotalF=0;
     uniqueAccounts2.sort((a,b)=>a.id.localeCompare(b.id)).forEach(a=>{
-        totalPaidF += accountPaidMapF[a.id]||0;
-        totalTipsF += accountTipsMapF[a.id]||0;
-        totalTotalF += accountTotalMapF[a.id]||0;
+        totalPaidF+=accountPaidMapF[a.id]||0;
+        totalTipsF+=accountTipsMapF[a.id]||0;
+        totalTotalF+=accountTotalMapF[a.id]||0;
     });
     insertTotalsRow(tbody2,[totalPaidF,totalTipsF,totalTotalF]);
     uniqueAccounts2.sort((a,b)=>a.id.localeCompare(b.id)).forEach(a=>{
         const tr=document.createElement('tr');
-        tr.innerHTML = `<td>${a.id}</td>
-                        <td>${(accountPaidMapF[a.id]||0).toFixed(2)}</td>
-                        <td>${(accountTipsMapF[a.id]||0).toFixed(2)}</td>
-                        <td>${(accountTotalMapF[a.id]||0).toFixed(2)}</td>`;
+        tr.innerHTML=`<td>${a.id}</td><td>${(accountPaidMapF[a.id]||0).toFixed(2)}</td><td>${(accountTipsMapF[a.id]||0).toFixed(2)}</td><td>${(accountTotalMapF[a.id]||0).toFixed(2)}</td>`;
         tbody2.appendChild(tr);
     });
 
-    // Difference Table
-    const tbody3 = document.getElementById('differenceTable').querySelector('tbody');
-    tbody3.innerHTML = '';
-    let totalDiffPaid=0, totalDiffTips=0, totalDiffTotal=0;
+    // Table 3 - difference
+    const tbody3=document.getElementById('differenceTable').querySelector('tbody');
+    tbody3.innerHTML='';
+    let totalDiffPaid=0,totalDiffTips=0,totalDiffTotal=0;
     uniqueAccounts1.sort((a,b)=>a.id.localeCompare(b.id)).forEach(a=>{
-        const staffNamesSet = new Set();
+        const staffNamesSet=new Set();
         dataCSV2.forEach(r=>{ if(cleanAccount(r[7])===a.id) staffNamesSet.add(cleanStaffName(r[9])); });
-        const staffNames = Array.from(staffNamesSet).join(', ');
+        const staffNames=Array.from(staffNamesSet).join(', ');
         if(staff && staffNamesSet.has(staff)) return;
-        const diffPaid = (accountPaidMap[a.id]||0) - (accountPaidMapF[a.id]||0);
-        const diffTips = (accountTipsMap[a.id]||0) - (accountTipsMapF[a.id]||0);
-        const diffTotal = (accountTotalMap[a.id]||0) - (accountTotalMapF[a.id]||0);
-        totalDiffPaid += diffPaid;
-        totalDiffTips += diffTips;
-        totalDiffTotal += diffTotal;
+        const diffPaid=(accountPaidMap[a.id]||0)-(accountPaidMapF[a.id]||0);
+        const diffTips=(accountTipsMap[a.id]||0)-(accountTipsMapF[a.id]||0);
+        const diffTotal=(accountTotalMap[a.id]||0)-(accountTotalMapF[a.id]||0);
+        totalDiffPaid+=diffPaid; totalDiffTips+=diffTips; totalDiffTotal+=diffTotal;
     });
     insertTotalsRow(tbody3,[totalDiffPaid,totalDiffTips,totalDiffTotal],true);
+
     uniqueAccounts1.sort((a,b)=>a.id.localeCompare(b.id)).forEach(a=>{
-        const staffNamesSet = new Set();
+        const staffNamesSet=new Set();
         dataCSV2.forEach(r=>{ if(cleanAccount(r[7])===a.id) staffNamesSet.add(cleanStaffName(r[9])); });
-        const staffNames = Array.from(staffNamesSet).join(', ');
+        const staffNames=Array.from(staffNamesSet).join(', ');
         if(staff && staffNamesSet.has(staff)) return;
-        const diffPaid = (accountPaidMap[a.id]||0) - (accountPaidMapF[a.id]||0);
-        const diffTips = (accountTipsMap[a.id]||0) - (accountTipsMapF[a.id]||0);
-        const diffTotal = (accountTotalMap[a.id]||0) - (accountTotalMapF[a.id]||0);
+        const diffPaid=(accountPaidMap[a.id]||0)-(accountPaidMapF[a.id]||0);
+        const diffTips=(accountTipsMap[a.id]||0)-(accountTipsMapF[a.id]||0);
+        const diffTotal=(accountTotalMap[a.id]||0)-(accountTotalMapF[a.id]||0);
         const tr=document.createElement('tr');
-        tr.innerHTML = `<td>${a.id}</td>
-                        <td>${staffNames}</td>
-                        <td>${diffPaid.toFixed(2)}</td>
-                        <td>${diffTips.toFixed(2)}</td>
-                        <td>${diffTotal.toFixed(2)}</td>`;
+        tr.innerHTML=`<td>${a.id}</td><td>${staffNames}</td><td>${diffPaid.toFixed(2)}</td><td>${diffTips.toFixed(2)}</td><td>${diffTotal.toFixed(2)}</td>`;
         tbody3.appendChild(tr);
     });
 }
 
-// ---- Export CSV Function ----
-function exportTableCSV(tableId, filename){
-    const table = document.getElementById(tableId);
-    let csv = [];
-    table.querySelectorAll('tr').forEach(tr=>{
-        let row = [];
-        tr.querySelectorAll('th, td').forEach(td=>row.push(td.textContent.trim()));
-        csv.push(row.join(','));
+function exportTableToCSV(tableId, filename){
+    const rows=document.querySelectorAll(`#${tableId} tr`);
+    const csv=[];
+    rows.forEach(row=>{
+        const cols=row.querySelectorAll('td,th');
+        csv.push(Array.from(cols).map(col=>`"${col.innerText}"`).join(','));
     });
-    const blob = new Blob([csv.join('\n')], {type: 'text/csv'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
+    const csvFile=new Blob([csv.join('\n')], {type:'text/csv'});
+    const link=document.createElement('a');
+    link.download=filename;
+    link.href=window.URL.createObjectURL(csvFile);
+    link.style.display='none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
-
-// Export buttons
-document.getElementById('exportCombinedCSV').addEventListener('click', ()=>exportTableCSV('combinedTable','combined_table.csv'));
-document.getElementById('exportFilteredCSV').addEventListener('click', ()=>exportTableCSV('filteredTable','filtered_table.csv'));
-document.getElementById('exportDifferenceCSV').addEventListener('click', ()=>exportTableCSV('differenceTable','difference_table.csv'));
-
 </script>
+
 </body>
 </html>
