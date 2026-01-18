@@ -117,13 +117,16 @@ body.light-mode button#toggleTheme:hover { background-color: #13876a; }
 
 <label>Upload Payments CSV (CSV 2):</label>
 <input type="file" id="csvFile2" accept=".csv"><br>
+  
+ <!-- Clear CSV Button -->
+<button class="export-btn" style="background-color:#c0392b;" onclick="clearCSV()">Clear CSV Data</button><br>
 
 <label>Select Staff:</label>
 <select id="staffSelect">
   <option value="">--All Staff--</option>
 </select><br>
 
-<h2>Payments of the day </h2>
+<h2>Payments of the day</h2>
 <div class="table-container">
   <table id="combinedTable">
     <thead>
@@ -343,6 +346,18 @@ function exportTableToCSV(tableId, filename){
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+}
+
+// CLEAR CSV DATA FUNCTION
+function clearCSV() {
+    dataCSV1 = [];
+    dataCSV2 = [];
+    document.getElementById('csvFile1').value = '';
+    document.getElementById('csvFile2').value = '';
+    const staffSelect = document.getElementById('staffSelect');
+    staffSelect.innerHTML = '<option value="">--All Staff--</option>';
+    // Clear all tables
+    document.querySelectorAll('table tbody').forEach(tbody => tbody.innerHTML = '');
 }
 </script>
 
